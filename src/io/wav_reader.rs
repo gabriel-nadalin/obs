@@ -1,0 +1,74 @@
+use std::fs::File;
+use std::path::Path;
+use wav::BitDepth;
+use crate::io::player::Player;
+use crate::{AMPLITUDE, SAMPLE_RATE};
+
+pub fn test() {
+    let mut inp_file = File::open(Path::new("samples/kick.wav")).unwrap();
+    let (header, data) = wav::read(&mut inp_file).unwrap();
+    dbg!(header);
+    let mut buffer = vec![];
+    for sample in data.try_into_eight().unwrap() {
+        let mut bit = 0;
+        if sample > 127 {
+            bit = AMPLITUDE;
+        }
+        buffer.push(bit)
+    }
+    // dbg!(data.as_eight().unwrap().to_vec());
+    let mut player = Player::new();
+    player.play_samples(buffer);
+    // player.play_samples(data.as_sixteen().unwrap().to_vec());
+}
+
+pub fn donwsample(data: BitDepth) -> Vec<u8> {
+    let mut vec = vec![];
+    match data {
+        BitDepth::Eight(samples) => {
+            for sample in samples {
+                let mut bit = 0;
+                if sample > 129 {
+                    bit = AMPLITUDE;
+                }
+                vec.push(bit);
+            }
+        }
+        BitDepth::Sixteen(samples) => {
+            for sample in samples {
+                let mut bit = 0;
+                if sample > 50 {
+                    bit = AMPLITUDE;
+                }
+                vec.push(bit);
+            }
+        }
+        _ => panic!()
+    }
+    vec
+}
+
+pub fn resample(samples: Vec<u8>, in_rate: u32, out_rate: u32) -> Vec<u8> {
+    let mut out_buffer = vec![];
+    for sample in samples {
+        for _ in 0..out_rate/in_rate {
+            out_buffer.push(sample);
+        }
+    }
+    out_buffer
+}
+
+pub fn get_sample(mut f: File) -> Vec<u8> {
+    let (header, data) = wav::read(&mut f).unwrap();
+    let sampling_rate = header.sampling_rate;
+    resample(donwsample(data), sampling_rate, SAMPLE_RATE)
+}
+
+pub fn play_wav_sample(mut f: File) {
+    let (header, data) = wav::read(&mut f).unwrap();
+    println!("{:?}", data);
+    let sampling_rate = header.sampling_rate;
+    let buffer = resample(donwsample(data), sampling_rate, SAMPLE_RATE);
+    let mut player = Player::new();
+    player.play_samples(buffer);
+}
