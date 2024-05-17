@@ -56,7 +56,7 @@ impl Synth {
     }
 
     /// turns on note in selected channel
-    pub fn note_on(&mut self, freq: u32, duty: u32, channel_n: usize) {
+    pub fn note_on(&mut self, freq: u32, duty: f32, channel_n: usize) {
         self.channels[channel_n].note_on(freq, duty);
     }
 
@@ -83,7 +83,7 @@ impl Synth {
                     if status == 0 {
                         self.channels[i].note_off(freq);
                     } else {
-                        self.channels[i].note_on(freq, 100)
+                        self.channels[i].note_on(freq, 0.1)
                     }
     
                     let parts = read_message(&mut readers[i]);

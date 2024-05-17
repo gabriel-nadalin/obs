@@ -3,11 +3,45 @@ use num_traits::pow;
 
 use crate::audio::channel::Channel;
 
+enum MidiEventType {
+    NoteOff,
+    NoteOn,
+    Other,
+}
+
+struct MidiEvent {
+    r#type: MidiEventType,
+    key: u8,
+    velocity: u8,
+    wall_tick: u32,
+    delta_tick: u32,
+}
+
+struct MidiNote {
+    key: u8,
+    velocity: u8,
+    start_time: u8,
+    duration: u8,
+}
+
+struct MidiTrack <'a>{
+    name: String,
+    instrument: String,
+    events: Vec<TrackEvent<'a>>,
+    notes: Vec<MidiNote>,
+    max_note: u8,
+    min_note: u8,
+}
+struct MidiChannel {
+    channel: Channel,
+    channel_number: usize,
+}
+
 pub struct MidiReader<'a> {
     smf: Smf<'a>,
     tempo: u32,
     ticks_per_beat: u16,
-    channels: Vec<Channel>,
+    channels: Vec<MidiChannel>,
 }
 
 impl<'a> MidiReader<'a> {
@@ -58,6 +92,18 @@ impl<'a> MidiReader<'a> {
             }
             println!("{i} - track '{name}': {n_messages} messages");
         }
+    }
+
+    pub fn set_channels(&mut self) {
+        for track in self.smf.tracks.iter() {
+            for event in track {
+                if let TrackEventKind::Midi { channel: channel_number, message } = event.kind {
+                    let channel_number = MidiChannel {channel: Channel::default(), channel_number: channel_number.as_int() as usize};
+                    self.channels.push(channel_number);
+                    break;
+                }
+            }
+        } 
     }
 
     fn next_message(&mut self, track: usize) -> TrackEvent {

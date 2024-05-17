@@ -25,7 +25,7 @@ pub struct Channel {
 impl Channel {
 
     /// sets an available voice's `freq` and `duty` and turns it on
-    pub fn note_on(&mut self, freq: u32, duty: u32) {        
+    pub fn note_on(&mut self, freq: u32, duty: f32) {        
         for i in 0..VOICES_MAX {
             if self.freqs[i] == 0 {
                 self.freqs[i] = freq;
@@ -92,7 +92,7 @@ impl Channel {
                 if status == 0 {
                     self.note_off(freq);
                 } else {
-                    self.note_on(freq, 62)
+                    self.note_on(freq, 0.062)
                 }
 
                 parts = read_message(&mut reader);
