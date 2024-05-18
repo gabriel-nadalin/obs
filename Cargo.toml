@@ -11,6 +11,8 @@ num-traits = "0.2"
 midly = "0.5.3"
 wav = "1.0.0"
 rand = "0.8.5"
+console = "0.15.8"
+termion = "4.0.0"
 
 [[bin]]
 name = "main"

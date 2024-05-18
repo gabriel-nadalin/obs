@@ -18,7 +18,7 @@ pub fn test() {
     }
     // dbg!(data.as_eight().unwrap().to_vec());
     let mut player = Player::new();
-    player.play_samples(buffer);
+    // player.play_samples(buffer);
     // player.play_samples(data.as_sixteen().unwrap().to_vec());
 }
 
@@ -71,6 +71,6 @@ pub fn play_wav_sample(mut f: File) {
     let buffer = resample(donwsample(data), sampling_rate, SAMPLE_RATE);
     let mut player = Player::new();
     for sample in buffer {
-        player.audio_out(sample);
+        // player.audio_out(sample);
     }
 }
