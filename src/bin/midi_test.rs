@@ -19,7 +19,7 @@ fn main() {
 
     utils::set_pcm_params(&pcm);
 
-    let mut reader = midi_reader::MidiReader::new(include_bytes!("../../musicas/ice_cap.mid"));
+    let mut reader = midi_reader::MidiFile::new(include_bytes!("../../musicas/ice_cap.mid"));
     reader.list_tracks();
     
     // In case the buffer was larger than 2 seconds, start the stream manually.

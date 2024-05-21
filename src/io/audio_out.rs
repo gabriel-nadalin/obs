@@ -29,13 +29,16 @@ impl AudioOut {
         }
     }
 
-    pub fn audio_out(&mut self, sample: bool) {
-        let sample = if sample {AMPLITUDE_MAX} else {AMPLITUDE_MIN};
+    pub fn audio_out(&mut self, sample: u8) {
         self.buffer.push(sample);
         if self.buffer.len() >= BUFFER_SIZE {
             let io = self.pcm.io_u8().unwrap();
             io.writei(&self.buffer).unwrap();
             self.buffer.clear();
         }
+    }
+
+    pub fn drain(&mut self) {
+        self.pcm.drain().unwrap();
     }
 }

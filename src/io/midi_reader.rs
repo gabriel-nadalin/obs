@@ -1,20 +1,22 @@
-use midly::{MidiMessage, Smf, TrackEvent, TrackEventKind, Timing, MetaMessage};
+use midly::{Smf};
 use num_traits::pow;
 
 use crate::synth::channel::Channel;
 
-enum MidiEventType {
+#[derive(Debug)]
+enum MidiEventKind {
     NoteOff,
     NoteOn,
+    MetaSetTempo(u32),
     Other,
 }
 
 struct MidiEvent {
-    r#type: MidiEventType,
+    kind: MidiEventKind,
     key: u8,
     velocity: u8,
-    wall_tick: u32,
     delta_tick: u32,
+    channel: u8,
 }
 
 struct MidiNote {
@@ -24,48 +26,164 @@ struct MidiNote {
     duration: u8,
 }
 
-struct MidiTrack <'a>{
+struct MidiTrack {
     name: String,
     instrument: String,
-    events: Vec<TrackEvent<'a>>,
+    events: Vec<MidiEvent>,
     notes: Vec<MidiNote>,
-    max_note: u8,
-    min_note: u8,
-}
-struct MidiChannel {
-    channel: Channel,
-    channel_number: usize,
 }
 
-pub struct MidiReader<'a> {
-    smf: Smf<'a>,
+pub struct MidiFile {
+    tracks: Vec<MidiTrack>,
     tempo: u32,
     ticks_per_beat: u16,
-    channels: Vec<MidiChannel>,
 }
 
-impl<'a> MidiReader<'a> {
-    pub fn new(f: &'a [u8]) -> Self {
+impl MidiFile {
+    pub fn new(f: &[u8]) -> Self {
         let smf = Smf::parse(f).unwrap();
         let tempo = 500_000;        // default midi tempo
-        let channels = vec![];
+        let tracks = Self::parse_tracks(&smf);
         let ticks_per_beat = match smf.header.timing {
-            Timing::Metrical(value) => value.as_int(),
-            Timing::Timecode(_, _) => {
+            midly::Timing::Metrical(value) => value.as_int(),
+            midly::Timing::Timecode(_, _) => {
                 // Handle Timecode variant if needed
                 // For now, just use a default value
                 0
             }
         };
         Self {
-            smf,
+            tracks,
             tempo,
             ticks_per_beat,
-            channels,
         }
     }
 
-    fn delta2us(self, delta_ticks: u32) -> u32 {
+    fn parse_tracks(smf: &Smf) -> Vec<MidiTrack> {
+        let mut tracks = vec![];
+
+        for (i, track_midly) in smf.tracks.iter().enumerate() {
+            let mut name = String::from("");
+            let mut instrument = String::from("");
+            let mut events = vec![];
+            let mut notes = vec![];
+
+            // parsing and storing track events
+            for event in track_midly {
+
+                match event.kind {
+
+                    // check if the event is a meta message
+                    midly::TrackEventKind::Meta(info) => {
+                        match info {
+                            midly::MetaMessage::TrackName(track_name) => {
+                                for char in track_name {
+                                    name.push(*char as char);
+                                }
+                                events.push(MidiEvent {
+                                    kind: MidiEventKind::Other,
+                                    key: 0,
+                                    velocity: 0,
+                                    delta_tick: 0,
+                                    channel: 0,
+                                })
+                            }
+                            midly::MetaMessage::InstrumentName(inst_name) => {
+                                for char in inst_name {
+                                    instrument.push(*char as char);
+                                }
+                                events.push(MidiEvent {
+                                    kind: MidiEventKind::Other,
+                                    key: 0,
+                                    velocity: 0,
+                                    delta_tick: 0,
+                                    channel: 0,
+                                })
+                            }
+                            midly::MetaMessage::Tempo(tempo) => {
+                                events.push(MidiEvent {
+                                    kind: MidiEventKind::MetaSetTempo(tempo.as_int()),
+                                    key: 0,
+                                    velocity: 0,
+                                    delta_tick: 0,
+                                    channel: 0,
+                                })
+                            }
+                            _ => {
+                                events.push(MidiEvent {
+                                    kind: MidiEventKind::Other,
+                                    key: 0,
+                                    velocity: 0,
+                                    delta_tick: 0,
+                                    channel: 0,
+                                })
+                            }
+                        }
+                    }
+
+                    // else check if event is of interest (note on or off for now)
+                    midly::TrackEventKind::Midi { channel, message } => {
+                        match message {
+                            midly::MidiMessage::NoteOn { key, vel } => {
+                                let mut kind = MidiEventKind::NoteOn;
+    
+                                // by convention, a NoteOn message with 0 velocity should be treated as a NoteOff
+                                if vel == 0 {
+                                    kind =MidiEventKind::NoteOff;
+                                }
+    
+                                events.push(MidiEvent {
+                                    kind,
+                                    key: key.as_int(),
+                                    velocity: vel.as_int(),
+                                    delta_tick: event.delta.as_int(),
+                                    channel: channel.as_int(),
+                                });
+                            }
+                            midly::MidiMessage::NoteOff { key, vel } => {
+                                events.push(MidiEvent {
+                                    kind: MidiEventKind::NoteOff,
+                                    key: key.as_int(),
+                                    velocity: vel.as_int(),
+                                    delta_tick: event.delta.as_int(),
+                                    channel: channel.as_int(),
+                                })
+                            }
+                            _ => {
+                                events.push(MidiEvent {
+                                    kind: MidiEventKind::Other,
+                                    key: 0,
+                                    velocity: 0,
+                                    delta_tick: event.delta.as_int(),
+                                    channel: channel.as_int(),
+                                })
+                            }
+                        }
+                    }
+
+                    _ => {
+                        events.push(MidiEvent {
+                            kind: MidiEventKind::Other,
+                            key: 0,
+                            velocity: 0,
+                            delta_tick: event.delta.as_int(),
+                            channel: 0,
+                        })
+                    }
+                }
+            }
+
+            tracks.push(MidiTrack {
+                name,
+                instrument,
+                events,
+                notes,
+            })
+        }
+        tracks
+    }
+
+    fn delta2us(&self, delta_ticks: u32) -> u32 {
         self.tempo * delta_ticks / self.ticks_per_beat as u32
     }
 
@@ -74,41 +192,37 @@ impl<'a> MidiReader<'a> {
     }
     
     pub fn list_tracks(&mut self) {
-        for (i, track) in self.smf.tracks.iter().enumerate() {
-            let mut name = String::from("");
-            let n_messages = track.len();
-            for event in track {
-                // Check if the event is a meta message
-                if let TrackEventKind::Meta(info) = event.kind {
-                    match info {
-                        MetaMessage::TrackName(t_name) => {
-                            for char in t_name {
-                                name.push(*char as char);
-                            }
-                        }
-                        _ => {}
-                    }
-                }
-            }
+        for (i, track) in self.tracks.iter().enumerate() {
+            let name = &track.name;
+            let n_messages = track.events.len();
             println!("{i} - track '{name}': {n_messages} messages");
         }
     }
 
-    pub fn set_channels(&mut self) {
-        for track in self.smf.tracks.iter() {
-            for event in track {
-                if let TrackEventKind::Midi { channel: channel_number, message } = event.kind {
-                    let channel_number = MidiChannel {channel: Channel::default(), channel_number: channel_number.as_int() as usize};
-                    self.channels.push(channel_number);
-                    break;
-                }
-            }
-        } 
+    pub fn list_events(&mut self, track: usize) {
+        for (i, event) in self.tracks[track].events.iter().enumerate() {
+            println!("{:?}", event.kind);
+            // let name = &track.name;
+            // let n_messages = track.events.len();
+            // println!("{i} - track '{name}': {n_messages} messages");
+        }
     }
 
-    fn next_message(&mut self, track: usize) -> TrackEvent {
-        self.smf.tracks[track].pop().unwrap()
-    }
+    // pub fn set_channels(&mut self) {
+    //     for track in self.smf.tracks.iter() {
+    //         for event in track {
+    //             if let TrackEventKind::Midi { channel: channel_number, message } = event.kind {
+    //                 let channel_number = MidiChannel {channel: Channel::default(), channel_number: channel_number.as_int() as usize};
+    //                 self.channels.push(channel_number);
+    //                 break;
+    //             }
+    //         }
+    //     } 
+    // }
+
+    // fn next_message(&mut self, track: usize) -> TrackEvent {
+    //     self.smf.tracks[track].pop().unwrap()
+    // }
 }
 
 pub fn play(){
@@ -122,26 +236,26 @@ pub fn play(){
     //         dbg!(event.kind);
     //     }
     // }
-    for track in smf.tracks {
-        for event in track {
-            // Check if the event is a MIDI message
-            if let TrackEventKind::Midi { channel: _, message } = event.kind {
-                // Process the MIDI message
-                match message {
-                    // MidiMessage::NoteOn { key, vel } => {
-                    //     println!("Note On: key={}, velocity={}", key, vel);
-                    // }
-                    // MidiMessage::NoteOff { key, vel } => {
-                    //     println!("Note Off: key={}, velocity={}", key, vel);
-                    // }
-                    // Handle other MIDI message types as needed
-                    _ => {}
-                }
-            } else if let TrackEventKind::Meta(info) = event.kind {
-                dbg!(info);
-            }
-        }
-    }
+    // for track in smf.tracks {
+    //     for event in track {
+    //         // Check if the event is a MIDI message
+    //         if let TrackEventKind::Midi { channel: _, message } = event.kind {
+    //             // Process the MIDI message
+    //             match message {
+    //                 // MidiMessage::NoteOn { key, vel } => {
+    //                 //     println!("Note On: key={}, velocity={}", key, vel);
+    //                 // }
+    //                 // MidiMessage::NoteOff { key, vel } => {
+    //                 //     println!("Note Off: key={}, velocity={}", key, vel);
+    //                 // }
+    //                 // Handle other MIDI message types as needed
+    //                 _ => {}
+    //             }
+    //         } else if let TrackEventKind::Meta(info) = event.kind {
+    //             dbg!(info);
+    //         }
+    //     }
+    // }
 
     // dbg!(&smf.tracks[3][7].message());
     // for (i, track) in smf.tracks.iter().enumerate() {

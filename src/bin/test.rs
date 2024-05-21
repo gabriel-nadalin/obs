@@ -58,9 +58,9 @@ fn main() {
     // wav::write(header, &track, &mut writer).unwrap();
 
     // play
-    loop {
-        player.audio_out(drums.get_sample())
-    }
+    // loop {
+    //     player.audio_out(drums.get_sample())
+    // }
     
     // In case the buffer was larger than 2 seconds, start the stream manually.
     // if pcm.state() != State::Running { pcm.start().unwrap() };

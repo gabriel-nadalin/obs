@@ -10,10 +10,13 @@ use crate::io::audio_out::AudioOut;
 use crate::synth::Synth;
 use crate::{AMPLITUDE_MAX, SAMPLE_RATE};
 
+use super::midi_reader::MidiFile;
+
 pub enum PlayerKind {
     KeyboardPlayer,
-    MidiPlayer,
+    MidiPlayer(MidiFile),
 }
+
 pub struct Player {
     output: AudioOut,
     kind: PlayerKind,
@@ -38,7 +41,7 @@ impl Player {
     //     self.pcm.drain().unwrap();
     // }
 
-    pub fn audio_out(&mut self, sample: bool) {
+    pub fn audio_out(&mut self, sample: u8) {
         self.output.audio_out(sample);
     }
 
@@ -64,7 +67,7 @@ impl Player {
             if let Some(Ok(Event::Key(Key::Char('w')))) = event {
                 key_pressed = true;
                 write!(stdout, "Key pressed: W\r\n").unwrap();
-                self.output.audio_out(voice.out());
+                // self.output.audio_out(voice.out());
             }
 
             if let Some(Ok(Event::Key(Key::Char(ch)))) = event {
@@ -72,7 +75,7 @@ impl Player {
             }
 
             if key_pressed {
-                self.output.audio_out(voice.out());
+                // self.output.audio_out(voice.out());
                 // key_pressed = false;
             }
 
@@ -84,9 +87,9 @@ impl Player {
     pub fn update(&mut self) {
         match self.kind {
             PlayerKind::KeyboardPlayer => self.update_keyboard(),
-            PlayerKind::MidiPlayer => self.update_midi(),
+            PlayerKind::MidiPlayer(_) => self.update_midi(),
         }
-        //TODO: both midi and keyboard players should be updated from the main instead of cointaining their own loops
+        //TODO: both midi and keyboard players should be updated from the main instead of containing their own loops
     }
 
     fn update_keyboard(&mut self) {
@@ -94,6 +97,10 @@ impl Player {
     }
 
     fn update_midi(&mut self) {
+        
+    }
 
+    pub fn drain(&mut self) {
+        self.output.drain();
     }
 }

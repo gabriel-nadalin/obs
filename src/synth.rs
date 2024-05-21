@@ -10,7 +10,7 @@ use num_traits::pow;
 
 use crate::synth::channel::Channel;
 use crate::utils::{read_message, write_buffer};
-use crate::CHANNELS_MAX;
+use crate::{AMPLITUDE_MAX, AMPLITUDE_MIN, CHANNELS_MAX};
 use crate::SAMPLE_RATE;
 use crate::BUFFER_SIZE;
 
@@ -44,17 +44,40 @@ impl Synth {
         }
     }
 
-    /// returns `BUFFER_SIZE` next samples
-    pub fn synth_out_buffer(&mut self) -> [bool; BUFFER_SIZE] {
-        let mut buffer = [false; BUFFER_SIZE];
+    /// returns `BUFFER_SIZE` next samples as u8
+    pub fn get_buffer(&mut self) -> [u8; BUFFER_SIZE] {
+        let mut buffer = [0; BUFFER_SIZE];
         for i in 0..BUFFER_SIZE {
-            buffer[i] = self.synth_out();
+            buffer[i] = self.get_sample();
         }
         buffer
     }
 
-    /// returns next sample
-    pub fn synth_out(&mut self) -> bool {
+    /// returns `BUFFER_SIZE` next samples as bool
+    pub fn get_buffer_bool(&mut self) -> [bool; BUFFER_SIZE] {
+        let mut buffer = [false; BUFFER_SIZE];
+        for i in 0..BUFFER_SIZE {
+            buffer[i] = self.get_sample_bool();
+        }
+        buffer
+    }
+
+    /// returns next sample as u8
+    pub fn get_sample(&mut self) -> u8 {
+        let mut out = false;
+
+        for i in 0..CHANNELS_MAX {
+            let channel_out = self.channels[i].out();
+            if i == self.current {
+                out = channel_out;
+            }
+        }
+        self.current = (self.current + 1) % CHANNELS_MAX;
+        if out {AMPLITUDE_MAX} else {AMPLITUDE_MIN}
+    }
+
+    /// returns next sample as bool
+    pub fn get_sample_bool(&mut self) -> bool {
         let mut out = false;
 
         for i in 0..CHANNELS_MAX {

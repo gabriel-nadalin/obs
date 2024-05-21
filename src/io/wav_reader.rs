@@ -17,7 +17,7 @@ pub fn test() {
         buffer.push(bit)
     }
     // dbg!(data.as_eight().unwrap().to_vec());
-    let mut player = Player::new(PlayerKind::MidiPlayer);
+    let mut player = Player::new(PlayerKind::KeyboardPlayer);
     // player.play_samples(buffer);
     // player.play_samples(data.as_sixteen().unwrap().to_vec());
 }
@@ -69,7 +69,7 @@ pub fn play_wav_sample(mut f: File) {
     // println!("{:?}", data);
     let sampling_rate = header.sampling_rate;
     let buffer = resample(donwsample(data), sampling_rate, SAMPLE_RATE);
-    let mut player = Player::new(PlayerKind::MidiPlayer);
+    let mut player = Player::new(PlayerKind::KeyboardPlayer);
     for sample in buffer {
         // player.audio_out(sample);
     }
