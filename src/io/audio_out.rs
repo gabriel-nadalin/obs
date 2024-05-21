@@ -1,7 +1,7 @@
 use alsa::Direction;
 use alsa::pcm::{Access, Format, HwParams, IO, PCM};
 use alsa::ValueOr;
-use crate::{AMPLITUDE, SAMPLE_RATE, BUFFER_SIZE};
+use crate::{AMPLITUDE_MAX, AMPLITUDE_MIN, BUFFER_SIZE, SAMPLE_RATE};
 
 pub fn set_pcm_params(pcm: &alsa::PCM) {
     let hwp = HwParams::any(&pcm).unwrap();
@@ -30,7 +30,7 @@ impl AudioOut {
     }
 
     pub fn audio_out(&mut self, sample: bool) {
-        let sample = if sample {AMPLITUDE} else {0};
+        let sample = if sample {AMPLITUDE_MAX} else {AMPLITUDE_MIN};
         self.buffer.push(sample);
         if self.buffer.len() >= BUFFER_SIZE {
             let io = self.pcm.io_u8().unwrap();

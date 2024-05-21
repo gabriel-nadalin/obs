@@ -5,7 +5,7 @@ use std::io::{BufRead, BufReader};
 
 use crate::SAMPLE_RATE;
 use crate::BUFFER_SIZE;
-use crate::AMPLITUDE;
+use crate::AMPLITUDE_MAX;
 
 pub fn set_pcm_params(pcm: &alsa::PCM) {
     let hwp = HwParams::any(&pcm).unwrap();
@@ -47,7 +47,7 @@ pub fn write_buffer(buffer: [bool; BUFFER_SIZE], io: &IO<u8>) {
     let mut buffer_out = [0; BUFFER_SIZE];
 
     for i in 0..BUFFER_SIZE {
-        buffer_out[i] = buffer[i] as u8 * AMPLITUDE;
+        buffer_out[i] = buffer[i] as u8 * AMPLITUDE_MAX;
     }
 
     assert_eq!(io.writei(&buffer_out).unwrap(), BUFFER_SIZE);

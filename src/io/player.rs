@@ -5,20 +5,30 @@ use termion::input::TermRead;
 use termion::raw::IntoRawMode;
 use termion::async_stdin;
 use std::io::{stdin, stdout, Write};
-use crate::audio::voice::Voice;
+use crate::synth::voice::Voice;
 use crate::io::audio_out::AudioOut;
-use crate::{AMPLITUDE, SAMPLE_RATE};
+use crate::synth::Synth;
+use crate::{AMPLITUDE_MAX, SAMPLE_RATE};
 
+pub enum PlayerKind {
+    KeyboardPlayer,
+    MidiPlayer,
+}
 pub struct Player {
     output: AudioOut,
+    kind: PlayerKind,
+    synth: Synth,
 }
 
 impl Player {
 
-    pub fn new() -> Self {
+    pub fn new(kind: PlayerKind) -> Self {
         let output = AudioOut::new();
+        let synth = Synth::new();
         Self {
             output,
+            kind,
+            synth,
         }
     }
 
@@ -69,5 +79,21 @@ impl Player {
             stdout.flush().unwrap();
             // sleep(Duration::from_millis(50)); // Add a small delay to reduce CPU usage
         }
+    }
+
+    pub fn update(&mut self) {
+        match self.kind {
+            PlayerKind::KeyboardPlayer => self.update_keyboard(),
+            PlayerKind::MidiPlayer => self.update_midi(),
+        }
+        //TODO: both midi and keyboard players should be updated from the main instead of cointaining their own loops
+    }
+
+    fn update_keyboard(&mut self) {
+
+    }
+
+    fn update_midi(&mut self) {
+
     }
 }

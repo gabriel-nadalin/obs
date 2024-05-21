@@ -1,8 +1,8 @@
 use std::fs::File;
 use std::path::Path;
 use wav::BitDepth;
-use crate::io::player::Player;
-use crate::{AMPLITUDE, SAMPLE_RATE};
+use crate::io::player::{Player, PlayerKind};
+use crate::{AMPLITUDE_MAX, AMPLITUDE_MIN, SAMPLE_RATE};
 
 pub fn test() {
     let mut inp_file = File::open(Path::new("samples/kick.wav")).unwrap();
@@ -10,14 +10,14 @@ pub fn test() {
     dbg!(header);
     let mut buffer = vec![];
     for sample in data.try_into_eight().unwrap() {
-        let mut bit = 0;
+        let mut bit = AMPLITUDE_MIN;
         if sample > 127 {
-            bit = AMPLITUDE;
+            bit = AMPLITUDE_MAX;
         }
         buffer.push(bit)
     }
     // dbg!(data.as_eight().unwrap().to_vec());
-    let mut player = Player::new();
+    let mut player = Player::new(PlayerKind::MidiPlayer);
     // player.play_samples(buffer);
     // player.play_samples(data.as_sixteen().unwrap().to_vec());
 }
@@ -69,7 +69,7 @@ pub fn play_wav_sample(mut f: File) {
     // println!("{:?}", data);
     let sampling_rate = header.sampling_rate;
     let buffer = resample(donwsample(data), sampling_rate, SAMPLE_RATE);
-    let mut player = Player::new();
+    let mut player = Player::new(PlayerKind::MidiPlayer);
     for sample in buffer {
         // player.audio_out(sample);
     }

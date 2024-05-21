@@ -1,7 +1,7 @@
 use midly::{MidiMessage, Smf, TrackEvent, TrackEventKind, Timing, MetaMessage};
 use num_traits::pow;
 
-use crate::audio::channel::Channel;
+use crate::synth::channel::Channel;
 
 enum MidiEventType {
     NoteOff,

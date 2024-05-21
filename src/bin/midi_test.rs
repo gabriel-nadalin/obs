@@ -1,18 +1,18 @@
 use alsa::Direction;
 use alsa::pcm::PCM;
 use midly::stream::Buffer;
-use obs::audio::drum_machine::{DrumMachine, DrumVoice};
+use obs::synth::drum_machine::{DrumMachine, DrumVoice};
 use obs::io::player::Player;
 use std::fs::File;
 use std::path::Path;
 use std::io::{BufReader, BufWriter, Write};
 use wav;
 
-use obs::audio::{drum_machine, synth};
+use obs::synth::{drum_machine};
 use obs::{utils, io::midi_reader};
 use obs::io::wav_reader;
 use obs::SAMPLE_RATE;
-use obs::AMPLITUDE;
+use obs::AMPLITUDE_MAX;
 
 fn main() {
     let pcm = PCM::new("default", Direction::Playback, false).unwrap();
