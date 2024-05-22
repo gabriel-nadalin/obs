@@ -10,29 +10,105 @@ use crate::io::audio_out::AudioOut;
 use crate::synth::Synth;
 use crate::{AMPLITUDE_MAX, SAMPLE_RATE};
 
-use super::midi_reader::MidiFile;
+use crate::io::midi_reader::{MidiFile, MidiEvent};
 
-pub enum PlayerKind {
-    KeyboardPlayer,
-    MidiPlayer(MidiFile),
+pub enum PlayerEvent {
+    KeyPress(char),
+    MidiMessage(MidiEvent),
+    // Add other event types as needed
+}
+
+pub trait PlayerMode {
+    fn audio_out(&mut self, sample: u8);
+    fn update(&mut self);
+    fn process_event(&mut self, event: PlayerEvent);
+    // fn start(&mut self);
+    // fn stop(&mut self);
+}
+
+pub struct KeyboardPlayer {
+    output: AudioOut,
+    synth: Synth,
+}
+
+impl KeyboardPlayer {
+
+    pub fn new() -> Self {
+        Self {
+            output: AudioOut::new(),
+            synth: Synth::new(),
+        }
+    }
+}
+
+impl PlayerMode for KeyboardPlayer {
+    fn audio_out(&mut self, sample: u8) {
+        self.output.audio_out(sample);
+    }
+
+    fn update(&mut self) {
+        
+    }
+
+    fn process_event(&mut self, event: PlayerEvent) {
+        
+    }
+}
+
+
+pub struct MidiPlayer {
+    output: AudioOut,
+    synth: Synth,
+    file: MidiFile,
+    pointers: Vec<usize>,
+}
+
+impl MidiPlayer {
+
+    pub fn new(file: MidiFile) -> Self {
+        let pointers = vec![0; file.tracks().len()];
+        Self {
+            output: AudioOut::new(),
+            synth: Synth::new(),
+            file,
+            pointers,
+        }
+    }
+}
+
+impl PlayerMode for MidiPlayer {
+    fn audio_out(&mut self, sample: u8) {
+        self.output.audio_out(sample);
+    }
+
+    fn update(&mut self) {
+        let file = &mut self.file;
+        for i in 0..file.tracks().len() {
+            let event = file.get_next_event(i);
+            while event.delta_tick() == 0 {
+                self.process_event(PlayerEvent::MidiMessage(event));
+            }
+        }
+    }
+
+    fn process_event(&mut self, event: PlayerEvent) {
+
+    }
+}
+
+pub enum Mode {
+    Keyboard(KeyboardPlayer),
+    Midi(MidiPlayer),
 }
 
 pub struct Player {
-    output: AudioOut,
-    kind: PlayerKind,
-    synth: Synth,
+    mode: Box<dyn PlayerMode>,
 }
 
 impl Player {
 
-    pub fn new(kind: PlayerKind) -> Self {
-        let output = AudioOut::new();
-        let synth = Synth::new();
-        Self {
-            output,
-            kind,
-            synth,
-        }
+    pub fn new(mode: Box<dyn PlayerMode>) -> Self {
+        Self { mode }
     }
 
     // pub fn play_samples(&mut self, samples: Vec<u8>) {
@@ -42,7 +118,7 @@ impl Player {
     // }
 
     pub fn audio_out(&mut self, sample: u8) {
-        self.output.audio_out(sample);
+        self.mode.audio_out(sample);
     }
 
     pub fn keyboard_player(&mut self) {
@@ -85,22 +161,11 @@ impl Player {
     }
 
     pub fn update(&mut self) {
-        match self.kind {
-            PlayerKind::KeyboardPlayer => self.update_keyboard(),
-            PlayerKind::MidiPlayer(_) => self.update_midi(),
-        }
+        
         //TODO: both midi and keyboard players should be updated from the main instead of containing their own loops
     }
 
-    fn update_keyboard(&mut self) {
-
-    }
-
-    fn update_midi(&mut self) {
-        
-    }
-
     pub fn drain(&mut self) {
-        self.output.drain();
+        // self.output.drain();
     }
 }

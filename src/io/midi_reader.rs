@@ -3,7 +3,7 @@ use num_traits::pow;
 
 use crate::synth::channel::Channel;
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 enum MidiEventKind {
     NoteOff,
     NoteOn,
@@ -11,7 +11,8 @@ enum MidiEventKind {
     Other,
 }
 
-struct MidiEvent {
+#[derive(Clone, Copy)]
+pub struct MidiEvent {
     kind: MidiEventKind,
     key: u8,
     velocity: u8,
@@ -19,18 +20,49 @@ struct MidiEvent {
     channel: u8,
 }
 
-struct MidiNote {
+impl MidiEvent {
+    pub fn kind(self) -> MidiEventKind {
+        self.kind
+    }
+
+    pub fn key(self) -> u8 {
+        self.key
+    }
+
+    pub fn velocity(self) -> u8 {
+        self.velocity
+    }
+
+    pub fn delta_tick(self) -> u32 {
+        self.delta_tick
+    }
+
+    pub fn channel(self) -> u8 {
+        self.channel
+    }
+
+    
+}
+
+pub struct MidiNote {
     key: u8,
     velocity: u8,
     start_time: u8,
     duration: u8,
 }
 
-struct MidiTrack {
+pub struct MidiTrack {
     name: String,
     instrument: String,
     events: Vec<MidiEvent>,
     notes: Vec<MidiNote>,
+    cursor: usize,
+}
+
+impl MidiTrack {
+    pub fn get_event(&self, index: usize) -> &MidiEvent {
+        &self.events[index]
+    }
 }
 
 pub struct MidiFile {
@@ -59,6 +91,14 @@ impl MidiFile {
         }
     }
 
+    pub fn get_next_event(&mut self, track_n: usize) -> MidiEvent {
+        let track = &mut self.tracks[track_n];
+        let cursor = &mut track.cursor;
+        let event = track.events[*cursor];
+        *cursor += 1;
+        event
+    }
+
     fn parse_tracks(smf: &Smf) -> Vec<MidiTrack> {
         let mut tracks = vec![];
 
@@ -67,6 +107,7 @@ impl MidiFile {
             let mut instrument = String::from("");
             let mut events = vec![];
             let mut notes = vec![];
+            let cursor = 0;
 
             // parsing and storing track events
             for event in track_midly {
@@ -178,6 +219,7 @@ impl MidiFile {
                 instrument,
                 events,
                 notes,
+                cursor,
             })
         }
         tracks
@@ -189,6 +231,10 @@ impl MidiFile {
 
     fn midi2freq(note: u8) -> u32 {
         pow(2, (note as usize - 69) / 12) * 440
+    }
+
+    pub fn tracks(&self) -> &Vec<MidiTrack> {
+        &self.tracks
     }
     
     pub fn list_tracks(&mut self) {

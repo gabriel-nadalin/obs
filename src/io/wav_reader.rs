@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::path::Path;
 use wav::BitDepth;
-use crate::io::player::{Player, PlayerKind};
+use crate::io::player::{Player};
 use crate::{AMPLITUDE_MAX, AMPLITUDE_MIN, SAMPLE_RATE};
 
 pub fn test() {
@@ -17,7 +17,7 @@ pub fn test() {
         buffer.push(bit)
     }
     // dbg!(data.as_eight().unwrap().to_vec());
-    let mut player = Player::new(PlayerKind::KeyboardPlayer);
+    // let mut player = Player::new(PlayerKind::KeyboardPlayer);
     // player.play_samples(buffer);
     // player.play_samples(data.as_sixteen().unwrap().to_vec());
 }
@@ -69,7 +69,7 @@ pub fn play_wav_sample(mut f: File) {
     // println!("{:?}", data);
     let sampling_rate = header.sampling_rate;
     let buffer = resample(donwsample(data), sampling_rate, SAMPLE_RATE);
-    let mut player = Player::new(PlayerKind::KeyboardPlayer);
+    // let mut player = Player::new(PlayerKind::KeyboardPlayer);
     for sample in buffer {
         // player.audio_out(sample);
     }
